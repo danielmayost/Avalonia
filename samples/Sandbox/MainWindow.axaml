@@ -1,4 +1,27 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
-        x:Class="Sandbox.MainWindow">
+        x:Class="Sandbox.MainWindow"
+        xmlns:loc="using:Sandbox" >
+  <Window.Resources>
+    <loc:Data x:Key="data"/>
+  </Window.Resources>
+  <Panel>
+    <ScrollViewer>
+      <ItemsRepeater Name="repeater" Items="{StaticResource data}">
+        <ItemsRepeater.Layout>
+          <loc:RatioVerticalGridLayout RowSpacing="5" ColumnSpacing="5" MinItemHeight="100" ItemsRatios="{StaticResource data}"/>
+          <!--<loc:VirtualizingStackLayout />-->
+          <!--<loc:ActivityFeedLayout/>-->
+          <!--<UniformGridLayout MinItemHeight="150" MinItemWidth="150" MinColumnSpacing="5" MinRowSpacing="5"/>-->
+        </ItemsRepeater.Layout>
+        <ItemsRepeater.ItemTemplate>
+          <DataTemplate>
+            <Button Content="{Binding}" HorizontalAlignment="Stretch" 
+              VerticalAlignment="Stretch"/>
+          </DataTemplate>
+        </ItemsRepeater.ItemTemplate>
+      </ItemsRepeater>
+    </ScrollViewer>
+      <Button Name="btv" Content="TTT"/>
+  </Panel>
 </Window>
