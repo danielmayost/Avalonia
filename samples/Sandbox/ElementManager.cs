@@ -9,11 +9,12 @@ namespace Sandbox;
 public class ElementManager
 {
     private readonly List<ILayoutable?> _realizedElements = new List<ILayoutable?>();
-    private readonly Rect[]? _realizedElementLayoutBounds;
     private int _firstRealizedDataIndex;
     private VirtualizingLayoutContext? _context;
 
-    public int RealizedElementCount => _context?.ItemCount ?? 0;
+    public int RealizedCount => _realizedElements.Count;
+    public int RealizedEndInData => _firstRealizedDataIndex + RealizedCount - 1;
+
 
     public ElementManager()
     {
@@ -25,11 +26,55 @@ public class ElementManager
         _context = virtualContext;
     }
 
-    public void OnBeginMeasure()
+    public void EnsureAndClear(Range range)
     {
-        if (_context != null)
+        ClearOutOfRange(range);
+
+        if (_firstRealizedDataIndex > range.Start.Value)
         {
-            DiscardElementsOutsideWindow(_context.RealizationRect);
+            for (int i = _firstRealizedDataIndex - 1; i >= range.Start.Value; i--)
+            {
+                var element = CreateElement(i);
+                Insert(0, i, element);
+            }
+        }
+
+        if (range.End.Value > RealizedEndInData)
+        {
+            for (int i = RealizedEndInData + 1; i <= range.End.Value; i++)
+            {
+                var element = CreateElement(i);
+                Add(element, i);
+            }
+        }
+    }
+
+    private void ClearOutOfRange(Range range)
+    {
+        if (RealizedCount == 0)
+        {
+            return;
+        }
+
+        if (_firstRealizedDataIndex > range.End.Value || RealizedEndInData <  range.Start.Value)
+        {
+            ClearRealizedRange();
+            return;
+        }
+        else if (_firstRealizedDataIndex == range.Start.Value && RealizedEndInData == range.End.Value)
+        {
+            return;
+        }
+
+        if (RealizedEndInData > range.End.Value)
+        {
+            ClearRealizedRange(range.End.Value + 1 - _firstRealizedDataIndex, 
+                RealizedEndInData - range.End.Value);
+        }
+
+        if (_firstRealizedDataIndex < range.Start.Value)
+        {
+            ClearRealizedRange(0, range.Start.Value - _firstRealizedDataIndex);
         }
     }
 
@@ -47,6 +92,12 @@ public class ElementManager
         }
 
         return element;
+    }
+
+    private ILayoutable CreateElement(int dataIndex)
+    {
+        return _context!.GetOrCreateElementAt(dataIndex,
+                ElementRealizationOptions.ForceCreate | ElementRealizationOptions.SuppressAutoRecycle);
     }
 
     public void Add(ILayoutable element, int dataIndex)
@@ -82,14 +133,12 @@ public class ElementManager
             }
         }
 
-        int endIndex = realizedIndex + count;
-        _realizedElements.RemoveRange(realizedIndex, endIndex - realizedIndex);
-        //_realizedElementLayoutBounds.RemoveRange(realizedIndex, endIndex - realizedIndex);
+        _realizedElements.RemoveRange(realizedIndex, count);
 
         if (realizedIndex == 0)
         {
             _firstRealizedDataIndex = _realizedElements.Count == 0 ?
-                -1 : _firstRealizedDataIndex + count;
+                0 : _firstRealizedDataIndex + count;
         }
     }
 
@@ -101,7 +150,7 @@ public class ElementManager
 
             if (forward)
             {
-                ClearRealizedRange(rangeIndex, RealizedElementCount - rangeIndex);
+                ClearRealizedRange(rangeIndex, RealizedCount - rangeIndex);
             }
             else
             {
@@ -112,34 +161,16 @@ public class ElementManager
 
     public void ClearRealizedRange()
     {
-        ClearRealizedRange(0, RealizedElementCount);
-    }
-
-    public Rect GetLayoutBoundsForRealizedIndex(int realizedIndex)
-    {
-        return _realizedElementLayoutBounds[realizedIndex];
-    }
-
-    public void SetLayoutBoundsForDataIndex(int dataIndex, in Rect bounds)
-    {
-        int realizedIndex = GetRealizedRangeIndexFromDataIndex(dataIndex);
-        _realizedElementLayoutBounds[realizedIndex] = bounds;
-    }
-    
-    public void SetLayoutBoundsForRealizedIndex(int realizedIndex, in Rect bounds)
-    {
-        _realizedElementLayoutBounds[realizedIndex] = bounds;
+        ClearRealizedRange(0, RealizedCount);
     }
 
     public bool IsDataIndexRealized(int index)
     {
-
-            int realizedCount = RealizedElementCount;
-            return
-                realizedCount > 0 &&
-                GetDataIndexFromRealizedRangeIndex(0) <= index &&
-                GetDataIndexFromRealizedRangeIndex(realizedCount - 1) >= index;
-
+        int realizedCount = RealizedCount;
+        return
+            realizedCount > 0 &&
+            GetDataIndexFromRealizedRangeIndex(0) <= index &&
+            GetDataIndexFromRealizedRangeIndex(realizedCount - 1) >= index;
     }
 
     public bool IsIndexValidInData(int currentIndex)
@@ -169,28 +200,6 @@ public class ElementManager
                 Insert(0, dataIndex, element);
             }
         }
-    }
-
-    public bool IsWindowConnected(in Rect window)
-    {
-        bool intersects = false;
-
-        if (_realizedElementLayoutBounds.Length > 0)
-        {
-            var firstElementBounds = _realizedElementLayoutBounds[0];
-            var lastElementBounds = _realizedElementLayoutBounds[RealizedElementCount - 1];
-
-            var windowStart = window.Y;
-            var windowEnd = window.Y + window.Height;
-            var firstElementStart = firstElementBounds.Y;
-            var lastElementEnd = lastElementBounds.Y + lastElementBounds.Height;
-
-            intersects =
-                firstElementStart <= windowEnd &&
-                lastElementEnd >= windowStart;
-        }
-
-        return intersects;
     }
 
     public void DataSourceChanged(object? source, NotifyCollectionChangedEventArgs args)
@@ -276,55 +285,12 @@ public class ElementManager
         return dataIndex - _firstRealizedDataIndex;
     }
 
-    private void DiscardElementsOutsideWindow(in Rect window)
-    {
-        int realizedRangeSize = RealizedElementCount;
-        int frontCutoffIndex = -1;
-        int backCutoffIndex = realizedRangeSize;
-
-        for (int i = 0;
-            i < realizedRangeSize &&
-            !Intersects(window, _realizedElementLayoutBounds[i]);
-            ++i)
-        {
-            ++frontCutoffIndex;
-        }
-
-        for (int i = realizedRangeSize - 1;
-            i >= 0 &&
-            !Intersects(window, _realizedElementLayoutBounds[i]);
-            --i)
-        {
-            --backCutoffIndex;
-        }
-
-        if (backCutoffIndex < realizedRangeSize - 1)
-        {
-            ClearRealizedRange(backCutoffIndex + 1, realizedRangeSize - backCutoffIndex - 1);
-        }
-
-        if (frontCutoffIndex > 0)
-        {
-            ClearRealizedRange(0, Math.Min(frontCutoffIndex, RealizedElementCount));
-        }
-    }
-
-    private static bool Intersects(in Rect lhs, in Rect rhs)
-    {
-        var lhsStart = lhs.Y;
-        var lhsEnd = lhs.Y + lhs.Height;
-        var rhsStart = rhs.Y;
-        var rhsEnd = rhs.Y + rhs.Height;
-
-        return lhsEnd >= rhsStart && lhsStart <= rhsEnd;
-    }
-
     private void OnItemsAdded(int index, int count)
     {
         // Using the old indices here (before it was updated by the collection change)
         // if the insert data index is between the first and last realized data index, we need
         // to insert items.
-        int lastRealizedDataIndex = _firstRealizedDataIndex + RealizedElementCount - 1;
+        int lastRealizedDataIndex = _firstRealizedDataIndex + RealizedCount - 1;
         int newStartingIndex = index;
         if (newStartingIndex >= _firstRealizedDataIndex &&
             newStartingIndex <= lastRealizedDataIndex)

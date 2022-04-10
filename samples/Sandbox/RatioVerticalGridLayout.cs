@@ -18,7 +18,7 @@ public class RatioVerticalGridLayout : VirtualizingLayout
     public static readonly DirectProperty<RatioVerticalGridLayout, IEnumerable<double>?> ItemsRatiosProperty =
         AvaloniaProperty.RegisterDirect<RatioVerticalGridLayout, IEnumerable<double>?>(nameof(ItemsRatios), o => o.ItemsRatios, (o, v) => o.ItemsRatios =v);
 
-    private readonly ElementManager _elementManager = new ElementManager();
+    private readonly Sandbox.ElementManager _elementManager = new ElementManager();
     private RatioLayoutManager _manager;
     private IEnumerable<double>? _itemsRatios;
     private Rect[]? _bounds;
@@ -104,6 +104,7 @@ public class RatioVerticalGridLayout : VirtualizingLayout
         if (state == null)
         {
             context.LayoutState = new RatioVerticalGridLayoutState();
+            _elementManager.SetContext(context);
         }
     }
 
@@ -121,6 +122,7 @@ public class RatioVerticalGridLayout : VirtualizingLayout
         state.LayoutRects = _manager.GetBounds();
 
         var range = _manager.GetRange(context.RealizationRect, context.ItemCount);
+        _elementManager.EnsureAndClear(range);
         state.RealizedIndex = range;
 
         int startIndex = range.Start.Value;
@@ -128,11 +130,11 @@ public class RatioVerticalGridLayout : VirtualizingLayout
 
         for (int i = startIndex; i <= endIndex; i++)
         {
-            var container = context.GetOrCreateElementAt(i);
+            var container = _elementManager.GetRealizedElement(i);
+            //var container = context.GetOrCreateElementAt(i);
 
             Size current = state.LayoutRects[i].Size;
-            if (!container.IsMeasureValid)
-            container.Measure(current);
+            container?.Measure(current);
         }
 
         return new Size(availableSize.Width, state.LayoutRects[^1].Bottom);
@@ -151,10 +153,9 @@ public class RatioVerticalGridLayout : VirtualizingLayout
 
         for (int i = startIndex; i <= endIndex; i++)
         {
-            var container = context.GetOrCreateElementAt(i);
-
-            if (!container.IsArrangeValid)
-            container.Arrange(state.LayoutRects[i]);
+            var container = _elementManager.GetRealizedElement(i);
+            //var container = context.GetOrCreateElementAt(i);
+            container?.Arrange(state.LayoutRects[i]);
         }
 
         return finalSize;
