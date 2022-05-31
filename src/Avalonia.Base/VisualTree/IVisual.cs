@@ -86,6 +86,11 @@ namespace Avalonia.VisualTree
         ITransform? RenderTransform { get; set; }
 
         /// <summary>
+        /// Gets the final render transform of the control.
+        /// </summary>
+        Matrix FinalRenderTransform { get; }
+
+        /// <summary>
         /// Gets or sets the render transform origin of the control.
         /// </summary>
         RelativePoint RenderTransformOrigin { get; set; }

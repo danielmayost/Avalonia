@@ -675,5 +675,10 @@ namespace Avalonia
                 visual.SetVisualParent(parent);
             }
         }
+
+        private Matrix CalculateRenderTransform()
+        {
+            
+        }
     }
 }
