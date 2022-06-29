@@ -1,4 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'
         x:Class="Sandbox.MainWindow">
+        <ScrollViewer>
+                <ItemsRepeater Name="repeater">
+                        <ItemsRepeater.Layout>
+                                <UniformGridLayout MinItemHeight="300" MinItemWidth="300"/>
+                        </ItemsRepeater.Layout>
+                </ItemsRepeater>
+        </ScrollViewer>
 </Window>
