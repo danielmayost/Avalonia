@@ -27,13 +27,13 @@ namespace Avalonia.Controls.UnitTests
         }
 
         [Fact]
-        public void TransitionContentPresenter_Should_Initially_Be_Hidden()
+        public void ContentPresenters2_Should_Initially_Be_Hidden()
         {
             using var app = Start();
             var (target, transition) = CreateTarget("foo");
-            var transitionPresenter = GetContentPresenters2(target);
+            var presenter2 = GetContentPresenters2(target);
 
-            Assert.False(transitionPresenter.IsVisible);
+            Assert.False(presenter2.IsVisible);
         }
 
         [Fact]
