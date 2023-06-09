@@ -66,7 +66,6 @@ namespace Avalonia.Controls.UnitTests
         public void Control_Should_Connect_To_VisualTree_Once()
         {
             using var app = Start();
-            using var sync = UnitTestSynchronizationContext.Begin();
             var (target, transition) = CreateTarget(new Control());
 
             var control = new Control();
@@ -75,10 +74,9 @@ namespace Avalonia.Controls.UnitTests
             control.AttachedToVisualTree += (s,e) => counter++;
 
             target.Content = control;
-
             Layout(target);
-            transition.Complete();
-            sync.ExecutePostedCallbacks();
+            target.Content = new Control();
+            Layout(target);
             
             Assert.Equal(1, counter);
         }
